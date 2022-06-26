@@ -1,0 +1,80 @@
+start : sql
+sql : select_block WS? from_block? WS? where_block?
+
+
+variable_comment : ("/*" PYTHON_CODE "*/" value)
+
+if_comment : ("/*%if" PYTHON_CODE "*/")
+elif_comment : ("/*%elif" PYTHON_CODE "*/")
+else_comment : ("/*%else*/")
+for_comment : ("/*%for" WS? WORD WS? ":" WS? PYTHON_CODE WS? "*/")
+end_comment : ("/*%end*/")
+
+select_block : SELECT WS? columns
+SELECT : "select" | "SELECT"
+columns : data ((WS AS)? WS CNAME)? (WS? COMMA WS? data ((WS AS)? WS CNAME)?)*
+data : column | value | variable_comment
+column : (TABLE DOT)? (CNAME | ALL_COLUMN)
+	| ALL_COLUMN
+COMMA : ","
+DOT : "."
+AS : "as" | "AS"
+ALL_COLUMN : "*"
+list : LEFT_PARENTHESIS WS? value (WS? COMMA WS? value)* WS? RIGHT_PARENTHESIS
+LEFT_PARENTHESIS : "("
+RIGHT_PARENTHESIS : ")"
+value : INT_VALUE | FLOAT_VALUE | STRING_VALUE
+INT_VALUE : INT
+FLOAT_VALUE : FLOAT 
+STRING_VALUE : /\'.+\'/ 
+data_comment : value "/*#" PYTHON_CODE "*/"
+PYTHON_CODE : /[^(\*\/)]+/
+
+from_block : FROM WS? tables
+FROM : "from" | "FROM"
+tables : TABLE (WS? join_tables)*
+join_tables : JOIN WS? TABLE WS? ON WS? conditions
+TABLE : CNAME
+JOIN : INNER_JOIN
+	| RIGHT_JOIN
+	| LEFT_JOIN
+	| OUTER_JOIN
+	| CROSS_JOIN
+INNER_JOIN : "inner join" | "INNER JOIN" | "join" | "JOIN"
+RIGHT_JOIN : "right join" | "RIGHT JOIN" | "right outer join" | "RIGHT OUTER JOIN"
+LEFT_JOIN : "left join" | "LEFT JOIN" | "left outer join" | "LEFT OUTER JOIN"
+OUTER_JOIN : "outer join" | "OUTER JOIN" | "full outer join" | "FULL OUTER JOIN"
+CROSS_JOIN : "cross join" | "CROSS JOIN"
+ON : "on" | "ON"
+
+where_block : WHERE WS? conditions
+WHERE : "where" | "WHERE"
+LOGICAL_OPERATOR : AND | OR
+AND : "and" | "AND"
+OR : "or" | "OR"
+
+
+conditions : condition ( WS? LOGICAL_OPERATOR WS? condition )*
+condition : (data WS? COMPARISON_OPERATOR WS? data)
+	| (data WS? COMPARISON_OPERATOR WS? list)
+	| (data WS? IN WS? list)
+	| (data WS? IN WS? data)
+	| condition_if_block
+condition_if_block : if_comment conditions ( elif_comment conditions)* ( else_comment conditions)? end_comment
+COMPARISON_OPERATOR : "<" 
+	| "<=" 
+	| "=" 
+	| ">=" 
+	| ">"
+IN : "in" | "IN"
+
+%import common.WORD   
+%import common.CNAME   
+%import common.WS_INLINE
+%import common.WS
+%import common.NL
+%import common.C_COMMENT
+%import common.INT
+%import common.FLOAT
+%import common._STRING_INNER
+%ignore WS
